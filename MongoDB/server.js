@@ -9,7 +9,7 @@ const MONGODB_URI = "YOUR_MONGODB_ATLAS_URI";
 const MONGODB_DB = "mongodb_demo";
 const PORT = 3000;
 
-if (MONGODB_URI === "YOUR_MONGODB_ATLAS_URI") {
+if (!MONGODB_URI.startsWith("mongodb+srv://") && !MONGODB_URI.startsWith("mongodb://")) {
   console.error("Paste your MongoDB Atlas connection string into MONGODB_URI in server.js.");
   process.exit(1);
 }
