@@ -1,0 +1,20 @@
+Firebase Firestore CRUD app (service-account key)
+
+1. In Firebase Console, open your project and go to Project settings > Service accounts.
+2. Generate a new private key and download the JSON file.
+3. Rename the downloaded file to serviceAccountKey.json.
+4. Put it in this project folder, beside package.json and server.js.
+   Never share this file or put it in the src folder. It is ignored by Git.
+5. Open two PowerShell windows in this folder.
+6. In the first window run: npm run server
+7. In the second window run: npm run dev
+8. Open the Vite URL shown in the second window, usually http://localhost:5173.
+9. Use Create, Load records, Edit, and Delete. Documents are saved in the
+   Firestore collection named records in the Firebase project named in the key.
+
+If dependencies are not installed, first run: npm install
+
+The service account has administrative access and bypasses Firestore Security
+Rules. This sample server listens only on your own computer. Do not expose it
+to the internet or deploy it as-is. The UI has no sign-in; anyone who can use
+this local app can read, add, edit, or delete records in the configured project.

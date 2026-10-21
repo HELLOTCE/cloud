@@ -1,0 +1,16 @@
+# Generated dependencies and build output
+**/node_modules/
+**/dist/
+**/build/
+
+# Local credentials and environment files
+**/.env
+**/.env.*
+!**/.env.example
+**/serviceAccountKey.json
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
