@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Currency Converter</title>
+  </head>
+  <body>
+    <main>
+      <h1>Currency Converter</h1>
+      <p>Convert an amount using exchange rates from Frankfurter.</p>
+
+      <form id="converter-form">
+        <p>
+          <label for="amount">Amount</label><br />
+          <input id="amount" name="amount" type="number" min="0" step="any" value="100" required />
+        </p>
+
+        <p>
+          <label for="from">From</label><br />
+          <select id="from" name="from">
+            <option value="USD">USD — US Dollar</option>
+            <option value="INR" selected>INR — Indian Rupee</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="JPY">JPY — Japanese Yen</option>
+            <option value="CAD">CAD — Canadian Dollar</option>
+            <option value="AUD">AUD — Australian Dollar</option>
+            <option value="CHF">CHF — Swiss Franc</option>
+            <option value="CNY">CNY — Chinese Yuan</option>
+            <option value="SGD">SGD — Singapore Dollar</option>
+          </select>
+        </p>
+
+        <p>
+          <label for="to">To</label><br />
+          <select id="to" name="to">
+            <option value="USD" selected>USD — US Dollar</option>
+            <option value="INR">INR — Indian Rupee</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="JPY">JPY — Japanese Yen</option>
+            <option value="CAD">CAD — Canadian Dollar</option>
+            <option value="AUD">AUD — Australian Dollar</option>
+            <option value="CHF">CHF — Swiss Franc</option>
+            <option value="CNY">CNY — Chinese Yuan</option>
+            <option value="SGD">SGD — Singapore Dollar</option>
+          </select>
+        </p>
+
+        <button id="convert-button" type="submit">Convert</button>
+      </form>
+
+      <p id="status" role="status" aria-live="polite"></p>
+      <section id="result" hidden>
+        <h2>Conversion result</h2>
+        <p id="converted-amount"></p>
+        <p id="exchange-rate"></p>
+        <p id="rate-date"></p>
+      </section>
+
+      <p><small>Reference rates update daily and may differ from rates offered by banks or payment providers.</small></p>
+    </main>
+
+    <script>
+      const form = document.querySelector("#converter-form");
+      const button = document.querySelector("#convert-button");
+      const status = document.querySelector("#status");
+      const result = document.querySelector("#result");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.hidden = true;
+        status.textContent = "Getting the latest available rate…";
+        button.disabled = true;
+
+        const params = new URLSearchParams(new FormData(form));
+        try {
+          const response = await fetch(`/api/convert?${params}`);
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Conversion failed.");
+
+          document.querySelector("#converted-amount").textContent =
+            `${data.amount} ${data.from} = ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(data.result)} ${data.to}`;
+          document.querySelector("#exchange-rate").textContent =
+            `Rate: 1 ${data.from} = ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(data.rate)} ${data.to}`;
+          document.querySelector("#rate-date").textContent = data.date ? `Rate date: ${data.date}` : "Same currency; no exchange needed.";
+          result.hidden = false;
+          status.textContent = "Conversion complete.";
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

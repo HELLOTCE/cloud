@@ -1,68 +1,48 @@
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = express();
 const port = Number(process.env.PORT || 3002);
-const upstream = "https://jsonplaceholder.typicode.com";
+const publicDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
 
-app.use(express.json({ limit: "100kb" }));
+app.use(express.static(publicDirectory));
 
 app.get("/api/health", (_request, response) => {
-  response.json({ status: "ok", thirdPartyApi: "JSONPlaceholder" });
+  response.json({ status: "ok", thirdPartyApi: "Frankfurter" });
 });
 
-app.get("/api/posts", async (request, response) => {
-  const requestedLimit = Number.parseInt(request.query.limit, 10) || 5;
-  const limit = Math.min(Math.max(requestedLimit, 1), 100);
+app.get("/api/convert", async (request, response) => {
+  const amount = Number(request.query.amount);
+  const from = String(request.query.from || "").toUpperCase();
+  const to = String(request.query.to || "").toUpperCase();
 
-  try {
-    const result = await fetch(`${upstream}/posts?_limit=${limit}`, {
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!result.ok) return response.status(result.status).json({ error: "Third-party API request failed." });
-    response.json(await result.json());
-  } catch (error) {
-    console.error("Third-party API request failed:", error.message);
-    response.status(502).json({ error: "Could not reach JSONPlaceholder. Check your internet connection." });
+  if (!Number.isFinite(amount) || amount < 0) {
+    return response.status(400).json({ error: "Amount must be a number greater than or equal to zero." });
   }
-});
-
-app.get("/api/posts/:id", async (request, response) => {
-  if (!/^\d+$/.test(request.params.id)) return response.status(400).json({ error: "Post ID must be a number." });
-
-  try {
-    const result = await fetch(`${upstream}/posts/${request.params.id}`, {
-      signal: AbortSignal.timeout(10000),
-    });
-    if (result.status === 404) return response.status(404).json({ error: "Post not found." });
-    if (!result.ok) return response.status(result.status).json({ error: "Third-party API request failed." });
-    response.json(await result.json());
-  } catch (error) {
-    console.error("Third-party API request failed:", error.message);
-    response.status(502).json({ error: "Could not reach JSONPlaceholder. Check your internet connection." });
+  if (!/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to)) {
+    return response.status(400).json({ error: "Enter valid three-letter currency codes." });
   }
-});
-
-app.post("/api/posts", async (request, response) => {
-  const { title, body, userId = 1 } = request.body ?? {};
-  if (typeof title !== "string" || !title.trim() || typeof body !== "string" || !body.trim()) {
-    return response.status(400).json({ error: "A title and body are required." });
+  if (from === to) {
+    return response.json({ amount, from, to, rate: 1, result: amount, date: null });
   }
 
   try {
-    const result = await fetch(`${upstream}/posts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=UTF-8" },
-      body: JSON.stringify({ title: title.trim(), body: body.trim(), userId }),
+    const upstream = await fetch(`https://api.frankfurter.dev/v2/rate/${from.toLowerCase()}/${to.toLowerCase()}`, {
       signal: AbortSignal.timeout(10000),
     });
-    if (!result.ok) return response.status(result.status).json({ error: "Third-party API request failed." });
-    response.status(result.status).json(await result.json());
+    const data = await upstream.json();
+    if (!upstream.ok) {
+      return response.status(upstream.status).json({ error: data.message || "Exchange rate request failed." });
+    }
+
+    response.json({ amount, from, to, rate: data.rate, result: amount * data.rate, date: data.date });
   } catch (error) {
-    console.error("Third-party API request failed:", error.message);
-    response.status(502).json({ error: "Could not reach JSONPlaceholder. Check your internet connection." });
+    console.error("Currency rate request failed:", error.message);
+    response.status(502).json({ error: "Could not reach the exchange-rate API. Check your internet connection." });
   }
 });
 
 app.listen(port, "127.0.0.1", () => {
-  console.log(`Third-party API demo listening at http://127.0.0.1:${port}`);
+  console.log(`Currency converter ready at http://127.0.0.1:${port}`);
 });

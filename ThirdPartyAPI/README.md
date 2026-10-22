@@ -1,31 +1,23 @@
-# Third-party API example
+# Currency converter
 
-This small Node.js server calls the public JSONPlaceholder posts API and exposes local endpoints that can be exercised in Postman. It needs no API key. It uses Node's built-in `fetch` and Express.
+A simple HTML currency converter served by a local Express server. The server requests the latest available reference rate from the Frankfurter API. No API key is required.
 
-## Run the local API
+## Run
 
-From this folder, run:
+From this folder, install dependencies once and start the server:
 
 ```powershell
 npm install
 npm run dev
 ```
 
-The server listens at `http://127.0.0.1:3002`.
+Open `http://127.0.0.1:3002` in your browser. Choose an amount and currencies, then select **Convert**.
 
-## Test in Postman
+Rates are reference rates updated daily and may differ from a bank or payment provider's rate. The browser page is plain HTML and uses the browser's default styling.
 
-1. In Postman, choose **Import**.
-2. Select `postman/ThirdPartyAPI.postman_collection.json` from this folder.
-3. Keep the Node server running, open the imported collection, and click **Run**.
+## Local endpoint
 
-The collection includes a health check, list posts, read one post, and create a demo post. Its test scripts check the HTTP status and response fields.
-
-## Local endpoints
-
+- `GET /api/convert?amount=100&from=INR&to=USD`
 - `GET /api/health`
-- `GET /api/posts?limit=5`
-- `GET /api/posts/1`
-- `POST /api/posts` with JSON such as `{ "title": "Hello", "body": "API test", "userId": 1 }`
 
-This example uses [JSONPlaceholder](https://jsonplaceholder.typicode.com/), a fake API for testing and learning. It returns a successful response for POST, but the post is not permanently saved upstream. The local server binds to your computer only.
+The conversion endpoint gets a rate from `https://api.frankfurter.dev/v2/rate/{base}/{quote}` and multiplies it by the requested amount.

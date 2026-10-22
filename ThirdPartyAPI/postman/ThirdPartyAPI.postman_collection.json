@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Third Party API Demo",
-    "description": "Postman requests and assertions for the local API that proxies JSONPlaceholder.",
+    "name": "Currency Converter API",
+    "description": "Requests for the local currency converter that uses the Frankfurter exchange-rate API.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -13,37 +13,16 @@
       "request": { "method": "GET", "url": "{{baseUrl}}/api/health" },
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
         "pm.test('Returns HTTP 200', function () { pm.response.to.have.status(200); });",
-        "pm.test('Reports API ready', function () { pm.expect(pm.response.json().status).to.eql('ok'); });"
+        "pm.test('Reports Frankfurter API', function () { pm.expect(pm.response.json().thirdPartyApi).to.eql('Frankfurter'); });"
       ] } }]
     },
     {
-      "name": "Get five posts from third-party API",
-      "request": { "method": "GET", "url": "{{baseUrl}}/api/posts?limit=5" },
+      "name": "Convert 100 INR to USD",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/convert?amount=100&from=INR&to=USD" },
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
         "pm.test('Returns HTTP 200', function () { pm.response.to.have.status(200); });",
-        "pm.test('Returns up to five posts', function () { pm.expect(pm.response.json()).to.be.an('array').and.have.lengthOf.at.most(5); });",
-        "pm.test('Posts have title and body', function () { pm.expect(pm.response.json()[0]).to.have.property('title'); pm.expect(pm.response.json()[0]).to.have.property('body'); });"
-      ] } }]
-    },
-    {
-      "name": "Get post 1",
-      "request": { "method": "GET", "url": "{{baseUrl}}/api/posts/1" },
-      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-        "pm.test('Returns HTTP 200', function () { pm.response.to.have.status(200); });",
-        "pm.test('Returns post 1', function () { pm.expect(pm.response.json().id).to.eql(1); });"
-      ] } }]
-    },
-    {
-      "name": "Create a demo post (simulated upstream write)",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Postman demo\",\n  \"body\": \"Testing a third-party API through a local Node server.\",\n  \"userId\": 1\n}", "options": { "raw": { "language": "json" } } },
-        "url": "{{baseUrl}}/api/posts"
-      },
-      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-        "pm.test('Returns HTTP 201', function () { pm.response.to.have.status(201); });",
-        "pm.test('Echoes the submitted title', function () { pm.expect(pm.response.json().title).to.eql('Postman demo'); });"
+        "pm.test('Returns the requested currencies', function () { const body = pm.response.json(); pm.expect(body.from).to.eql('INR'); pm.expect(body.to).to.eql('USD'); });",
+        "pm.test('Includes a positive exchange rate and result', function () { const body = pm.response.json(); pm.expect(body.rate).to.be.above(0); pm.expect(body.result).to.be.above(0); });"
       ] } }]
     }
   ]
