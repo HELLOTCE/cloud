@@ -1,128 +1,116 @@
-EXPERIMENT 8: HADOOP AND MAPREDUCE Commands and Output
 
-STEP 1 — INSTALL JAVA AND SSH
+# EXPERIMENT 8: HADOOP AND MAPREDUCE
+# COMMANDS AND OUTPUT
 
-COMMANDS: sudo apt update sudo apt install openjdk-11-jdk openssh-server
-wget -y java -version
+# STEP 1: INSTALL JAVA AND SSH
+sudo apt update
+sudo apt install openjdk-11-jdk openssh-server wget -y
+java -version
 
-OUTPUT: openjdk version “11…” OpenJDK Runtime Environment OpenJDK 64-Bit
-Server VM
+# STEP 2: EXTRACT HADOOP (ALREADY DOWNLOADED)
+cd ~/Downloads
+tar -xzf hadoop-3.3.6.tar.gz
+sudo mv hadoop-3.3.6 /usr/local/hadoop
+sudo chown -R "$USER":"$USER" /usr/local/hadoop
 
-STEP 2 — DOWNLOAD AND EXTRACT HADOOP Note: Hadoop is already downloaded,
-so skip the wget command.
+# STEP 3: CONFIGURE ENVIRONMENT VARIABLES
+echo 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64' >> ~/.bashrc
+echo 'export HADOOP_HOME=/usr/local/hadoop' >> ~/.bashrc
+echo 'export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin' >> ~/.bashrc
+source ~/.bashrc
 
-COMMANDS: cd ~/Downloads tar -xzf hadoop-3.3.6.tar.gz sudo mv
-hadoop-3.3.6 /usr/local/hadoop sudo chown -R “$USER":"$USER”
-/usr/local/hadoop
+# STEP 3A: SET HADOOP JAVA PATH
+echo 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64' >> "$HADOOP_HOME/etc/hadoop/hadoop-env.sh"
+hadoop version
 
-OUTPUT: Hadoop is extracted to /usr/local/hadoop.
+# STEP 4: CONFIGURE PASSWORDLESS SSH
+sudo systemctl enable --now ssh
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+[ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+ssh -o StrictHostKeyChecking=accept-new localhost
+# Type exit after SSH connects
+exit
 
-STEP 3 — CONFIGURE ENVIRONMENT VARIABLES
+# STEP 5: CONFIGURE core-site.xml
+cat > "$HADOOP_HOME/etc/hadoop/core-site.xml" <<'EOF'
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://localhost:9000</value>
+    </property>
+</configuration>
+EOF
 
-COMMANDS: echo ‘export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64’ >>
-~/.bashrc echo ‘export HADOOP_HOME=/usr/local/hadoop’ >> ~/.bashrc echo
-‘export PATH=PATH:HADOOP_HOME/bin:$HADOOP_HOME/sbin’ >> ~/.bashrc source
-~/.bashrc
+# STEP 6: CONFIGURE hdfs-site.xml
+mkdir -p "$HADOOP_HOME/data/namenode"
+mkdir -p "$HADOOP_HOME/data/datanode"
 
-OUTPUT: Environment variables are configured.
+cat > "$HADOOP_HOME/etc/hadoop/hdfs-site.xml" <<'EOF'
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:///usr/local/hadoop/data/namenode</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:///usr/local/hadoop/data/datanode</value>
+    </property>
+</configuration>
+EOF
 
-STEP 3A — SET HADOOP’S JAVA PATH
+# STEP 7: CONFIGURE MAPREDUCE
+cat > "$HADOOP_HOME/etc/hadoop/mapred-site.xml" <<'EOF'
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+</configuration>
+EOF
 
-COMMANDS: echo ‘export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64’ >>
-“$HADOOP_HOME/etc/hadoop/hadoop-env.sh” hadoop version
+# STEP 8: CONFIGURE YARN
+cat > "$HADOOP_HOME/etc/hadoop/yarn-site.xml" <<'EOF'
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+</configuration>
+EOF
 
-OUTPUT: Hadoop 3.3.6 Source code repository … Compiled by … Compiled on
-…
+# STEP 9: FORMAT THE NAMENODE
+# Only for a fresh setup; do not reformat existing HDFS data.
+hdfs namenode -format
 
-STEP 4 — CONFIGURE PASSWORDLESS SSH
+# STEP 10: START HADOOP SERVICES
+start-dfs.sh
+start-yarn.sh
+jps
 
-COMMANDS: sudo systemctl enable –now ssh mkdir -p ~/.ssh chmod 700
-~/.ssh [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -N “” -f ~/.ssh/id_rsa
-cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys chmod 600
-~/.ssh/authorized_keys ssh -o StrictHostKeyChecking=accept-new localhost
+# STEP 11: CREATE SAMPLE INPUT FILE
+echo "hello hadoop hello spark" > ~/file.txt
 
-If SSH opens a remote shell, run: exit
+# STEP 12: CREATE HDFS INPUT DIRECTORY
+hdfs dfs -mkdir -p /input
 
-OUTPUT: A localhost shell opens. Type exit to return to the original
-terminal.
+# STEP 13: UPLOAD INPUT FILE
+hdfs dfs -put -f ~/file.txt /input/
 
-STEP 5 — CONFIGURE core-site.xml
+# STEP 14: RUN MAPREDUCE WORD COUNT
+hdfs dfs -rm -r -f /output
+hadoop jar "$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar" wordcount /input /output
 
-COMMANDS: cat > “$HADOOP_HOME/etc/hadoop/core-site.xml” <<‘EOF’
-fs.defaultFS hdfs://localhost:9000 EOF
+# STEP 15: DISPLAY RESULTS
+hdfs dfs -cat /output/part-r-00000
 
-OUTPUT: The core-site.xml configuration file is created.
-
-STEP 6 — CONFIGURE hdfs-site.xml
-
-COMMANDS: mkdir -p “$HADOOP_HOME/data/namenode"
-mkdir -p "$HADOOP_HOME/data/datanode”
-
-cat > “$HADOOP_HOME/etc/hadoop/hdfs-site.xml” <<‘EOF’ dfs.replication 1
-dfs.namenode.name.dir file:///usr/local/hadoop/data/namenode
-dfs.datanode.data.dir file:///usr/local/hadoop/data/datanode EOF
-
-OUTPUT: The hdfs-site.xml configuration file is created.
-
-STEP 7 — CONFIGURE MAPREDUCE
-
-COMMANDS: cat > “$HADOOP_HOME/etc/hadoop/mapred-site.xml” <<‘EOF’
-mapreduce.framework.name yarn EOF
-
-OUTPUT: The mapred-site.xml configuration file is created.
-
-STEP 8 — CONFIGURE YARN
-
-COMMANDS: cat > “$HADOOP_HOME/etc/hadoop/yarn-site.xml” <<‘EOF’
-yarn.nodemanager.aux-services mapreduce_shuffle EOF
-
-OUTPUT: The yarn-site.xml configuration file is created.
-
-STEP 9 — FORMAT THE NAMENODE
-
-COMMAND: hdfs namenode -format
-
-OUTPUT: Storage directory is successfully formatted. Note: Only format a
-fresh setup. Do not format an existing HDFS containing data.
-
-STEP 10 — START HADOOP SERVICES
-
-COMMANDS: start-dfs.sh start-yarn.sh jps
-
-OUTPUT: NameNode DataNode ResourceManager NodeManager Jps
-
-STEP 11 — CREATE A SAMPLE INPUT FILE
-
-COMMAND: echo “hello hadoop hello spark” > ~/file.txt
-
-OUTPUT: The sample input file is created.
-
-STEP 12 — CREATE AN HDFS INPUT DIRECTORY
-
-COMMAND: hdfs dfs -mkdir -p /input
-
-OUTPUT: The /input directory is created in HDFS.
-
-STEP 13 — UPLOAD THE INPUT FILE
-
-COMMAND: hdfs dfs -put -f ~/file.txt /input/
-
-OUTPUT: The file is uploaded to HDFS.
-
-STEP 14 — RUN MAPREDUCE WORD COUNT
-
-COMMANDS: hdfs dfs -rm -r -f /output hadoop jar
-“$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar”
-wordcount /input /output
-
-OUTPUT: MapReduce Word Count job completes successfully. The output is
-saved in the /output directory.
-
-STEP 15 — DISPLAY THE RESULTS
-
-COMMAND: hdfs dfs -cat /output/part-r-00000
-
-OUTPUT: hadoop 1 hello 2 spark 1
-
-RESULT: Hadoop processes the input using MapReduce and stores the word
-counts in HDFS.
+# EXPECTED OUTPUT:
+# hadoop  1
+# hello   2
+# spark   1
