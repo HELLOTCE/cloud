@@ -1,0 +1,240 @@
+EXPERIMENT 9: APACHE SPARK
+Commands and Output
+
+Note: These commands use Spark 4.0.1 with Java 17. If Spark is already downloaded, skip the download command. If it is already extracted and installed, skip extraction and moving too.
+
+STEP 1 — UPDATE UBUNTU
+
+COMMAND:
+sudo apt update
+
+OUTPUT:
+Package list updated successfully.
+
+
+STEP 2 — INSTALL JAVA, SCALA, PYTHON, AND WGET
+
+COMMANDS:
+sudo apt install openjdk-17-jdk scala python3 python3-pip wget -y
+java -version
+scala -version
+python3 --version
+
+OUTPUT:
+openjdk version "17..."
+Scala code runner version ...
+Python 3...
+
+
+STEP 3 — DOWNLOAD SPARK
+Skip this step if Spark is already downloaded.
+
+COMMANDS:
+cd ~/Downloads
+wget https://archive.apache.org/dist/spark/spark-4.0.1/spark-4.0.1-bin-hadoop3.tgz
+
+OUTPUT:
+Spark archive downloaded successfully.
+
+
+STEP 4 — EXTRACT AND MOVE SPARK
+Skip extraction and moving if Spark is already installed in /usr/local/spark.
+
+COMMANDS:
+cd ~/Downloads
+tar -xzf spark-4.0.1-bin-hadoop3.tgz
+sudo mv spark-4.0.1-bin-hadoop3 /usr/local/spark
+sudo chown -R "$USER":"$USER" /usr/local/spark
+
+OUTPUT:
+Spark is extracted to /usr/local/spark.
+
+
+STEP 5 — CONFIGURE ENVIRONMENT VARIABLES
+
+COMMANDS:
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
+echo 'export SPARK_HOME=/usr/local/spark' >> ~/.bashrc
+echo 'export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin' >> ~/.bashrc
+source ~/.bashrc
+echo "$JAVA_HOME"
+echo "$SPARK_HOME"
+
+OUTPUT:
+/usr/lib/jvm/java-17-openjdk-amd64
+/usr/local/spark
+
+
+STEP 6 — CREATE INPUT FILES
+
+COMMANDS:
+echo "Spark is fast and Spark is powerful" > ~/input.txt
+echo "id,name,age" > ~/students.csv
+echo "1,Alice,22" >> ~/students.csv
+echo "2,Bob,25" >> ~/students.csv
+
+OUTPUT:
+Input text file and CSV file created successfully.
+
+
+STEP 7 — START SPARK SHELL
+
+COMMAND:
+spark-shell
+
+OUTPUT:
+Spark shell starts and displays the scala> prompt.
+
+
+STEP 8 — READ THE TEXT FILE
+Run inside spark-shell.
+
+COMMAND:
+val inputFile = sc.textFile("file:///home/" + sys.env("USER") + "/input.txt")
+
+OUTPUT:
+inputFile: org.apache.spark.rdd.RDD[String] = ...
+
+
+STEP 9 — COUNT LINES
+
+COMMAND:
+inputFile.count()
+
+OUTPUT:
+Long = 1
+
+
+STEP 10 — DISPLAY FILE CONTENT
+
+COMMAND:
+inputFile.collect().foreach(println)
+
+OUTPUT:
+Spark is fast and Spark is powerful
+
+
+STEP 11 — SPLIT LINES INTO WORDS
+
+COMMAND:
+val words = inputFile.flatMap(line => line.split(" "))
+
+OUTPUT:
+words: org.apache.spark.rdd.RDD[String] = ...
+
+
+STEP 12 — CREATE WORD-COUNT PAIRS
+
+COMMAND:
+val pairs = words.map(word => (word, 1))
+
+OUTPUT:
+pairs: org.apache.spark.rdd.RDD[(String, Int)] = ...
+
+
+STEP 13 — ADD COUNTS FOR REPEATED WORDS
+
+COMMAND:
+val counts = pairs.reduceByKey(_ + _)
+
+OUTPUT:
+counts: org.apache.spark.rdd.RDD[(String, Int)] = ...
+
+
+STEP 14 — DISPLAY WORD COUNTS
+
+COMMAND:
+counts.collect().foreach(println)
+
+OUTPUT:
+(Spark,2)
+(is,1)
+(fast,1)
+(and,1)
+(powerful,1)
+
+
+STEP 15 — LOAD CSV INTO A DATAFRAME
+
+COMMANDS:
+val df = spark.read
+  .option("header", "true")
+  .csv("file:///home/" + sys.env("USER") + "/students.csv")
+
+OUTPUT:
+df: org.apache.spark.sql.DataFrame = [id: string, name: string ...]
+
+
+STEP 16 — DISPLAY THE DATAFRAME
+
+COMMAND:
+df.show()
+
+OUTPUT:
++---+-----+---+
+| id| name|age|
++---+-----+---+
+|  1|Alice| 22|
+|  2|  Bob| 25|
++---+-----+---+
+
+
+STEP 17 — DISPLAY THE SCHEMA
+
+COMMAND:
+df.printSchema()
+
+OUTPUT:
+root
+ |-- id: string (nullable = true)
+ |-- name: string (nullable = true)
+ |-- age: string (nullable = true)
+
+
+STEP 18 — CREATE A TEMPORARY SQL VIEW
+
+COMMAND:
+df.createOrReplaceTempView("students")
+
+OUTPUT:
+No output. Temporary view created successfully.
+
+
+STEP 19 — DISPLAY ALL STUDENTS WITH SQL
+
+COMMAND:
+spark.sql("SELECT * FROM students").show()
+
+OUTPUT:
++---+-----+---+
+| id| name|age|
++---+-----+---+
+|  1|Alice| 22|
+|  2|  Bob| 25|
++---+-----+---+
+
+
+STEP 20 — COUNT STUDENT RECORDS
+
+COMMAND:
+spark.sql("SELECT COUNT(*) AS total FROM students").show()
+
+OUTPUT:
++-----+
+|total|
++-----+
+|    2|
++-----+
+
+
+STEP 21 — EXIT SPARK SHELL
+
+COMMAND:
+:quit
+
+OUTPUT:
+Returns to the Ubuntu Terminal.
+
+
+RESULT:
+Spark reads a text file into an RDD, counts words, loads CSV data into a DataFrame, displays its schema, and executes SQL queries.
